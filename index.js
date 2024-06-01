@@ -10,10 +10,15 @@ require('dotenv').config();
 // Middleware
 app.use(cors({
   origin: ['http://localhost:5173','https://khamar-server-mb0e17cvf-shahadat-hossains-projects-d6251f0a.vercel.app/'],
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// app.use(cors({
+//   origin: ['http://localhost:5173','https://khamar-server-mb0e17cvf-shahadat-hossains-projects-d6251f0a.vercel.app/'],
+//   credentials: true
+// }));
 app.use(express.json());
-app.use(cookieParser());
+// app.use(cookieParser());
 
 const verifyToken = (req, res, next) => {
   const authorization = req.headers.authorization;
