@@ -9,7 +9,7 @@ require('dotenv').config();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173'],
+  origin: ['http://localhost:5173','https://khamar-server-mb0e17cvf-shahadat-hossains-projects-d6251f0a.vercel.app/'],
   credentials: true
 }));
 app.use(express.json());
