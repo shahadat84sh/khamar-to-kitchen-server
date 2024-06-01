@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -9,16 +8,12 @@ require('dotenv').config();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173','https://khamar-server-mb0e17cvf-shahadat-hossains-projects-d6251f0a.vercel.app/'],
+  origin: ['http://localhost:5173', 'https://your-vercel-domain.vercel.app'], // Add your Vercel domain
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
-// app.use(cors({
-//   origin: ['http://localhost:5173','https://khamar-server-mb0e17cvf-shahadat-hossains-projects-d6251f0a.vercel.app/'],
-//   credentials: true
-// }));
 app.use(express.json());
-// app.use(cookieParser());
 
 const verifyToken = (req, res, next) => {
   const authorization = req.headers.authorization;
@@ -38,8 +33,6 @@ const verifyToken = (req, res, next) => {
     next();
   });
 }
-
-
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xu7lgvl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 const client = new MongoClient(uri, {
@@ -66,7 +59,7 @@ async function run() {
       });
       res.send(token);
     });
-    // all users
+
     app.post('/users', async (req, res) =>{
       const user = req.body;
       const query = {email: user.email}
@@ -83,7 +76,7 @@ async function run() {
       const result = await userCollection.find().toArray()
       res.send(result);
     })
-// shop related api
+
     app.get('/shop', async (req, res) => {
       const result = await shopCollection.find().toArray();
       res.json(result);
@@ -139,9 +132,6 @@ async function run() {
       }
     });
 
-
-    // get products by email
-
     app.get('/cartProducts', verifyToken, async (req, res) => {
       const email = req.query.email;
       if (!email) {
@@ -159,81 +149,78 @@ async function run() {
           console.error('Error fetching cart products:', error);
           res.status(500).send({ error: true, message: 'Server error' });
       }
-  });
-  // delete cartProducts
-  app.delete('/cartProducts/:id', async (req, res) => {
-    const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
-  
-    try {
-      const result = await cartCollection.deleteOne(query); 
-      if (result.deletedCount === 1) {
-        res.status(200).json({ message: 'Product deleted successfully' });
-      } else {
-        res.status(404).json({ message: 'Product not found' });
-      }
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
+    });
 
-  app.delete('/cartProducts',verifyToken,async (req, res) => {
-    const userId = req.user.uid; 
-    const { productIds } = req.body;
-  
-    try {
-      const result = await cartCollection.deleteMany({ 
-        userId, 
-        productId: { $in: productIds } 
-      });
-  
-      if (result.deletedCount === 0) {
-        return res.status(404).json({ message: 'No products found to delete' });
+    app.delete('/cartProducts/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+    
+      try {
+        const result = await cartCollection.deleteOne(query); 
+        if (result.deletedCount === 1) {
+          res.status(200).json({ message: 'Product deleted successfully' });
+        } else {
+          res.status(404).json({ message: 'Product not found' });
+        }
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        res.status(500).json({ message: 'Internal server error' });
       }
-  
-      res.json({ message: 'Products removed successfully', deletedCount: result.deletedCount });
-    } catch (error) {
-      console.error('Error removing products:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
-// order related api
-  app.post('/orders', verifyToken, async(req, res) =>{
-    const { userId, items, address, total, status } = req.body;
-    if (!userId || !items || !address || !total || !status) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-    const newOrder = {
-      userId,
-      address,
-      items,
-      total,
-      status,
-      createdAt: new Date()
-    }
+    });
+
+    app.delete('/cartProducts', verifyToken, async (req, res) => {
+      const userId = req.user.uid; 
+      const { productIds } = req.body;
+    
+      try {
+        const result = await cartCollection.deleteMany({ 
+          userId, 
+          productId: { $in: productIds } 
+        });
+    
+        if (result.deletedCount === 0) {
+          return res.status(404).json({ message: 'No products found to delete' });
+        }
+    
+        res.json({ message: 'Products removed successfully', deletedCount: result.deletedCount });
+      } catch (error) {
+        console.error('Error removing products:', error);
+        res.status(500).json({ message: 'Internal server error' });
+      }
+    });
+
+    app.post('/orders', verifyToken, async(req, res) =>{
+      const { userId, items, address, total, status } = req.body;
+      if (!userId || !items || !address || !total || !status) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      const newOrder = {
+        userId,
+        address,
+        items,
+        total,
+        status,
+        createdAt: new Date()
+      }
       const result = await orderCollection.insertOne(newOrder);
       res.send(result)
-  })
+    })
 
-  // orders for admin
-  app.get('/orders', async(req,res) =>{
-    try {
-      const orders = await orderCollection.find().toArray();
-      res.json(orders)
-    } catch (error) {
-      res.status(500).json({message:error.message})
-    }
-  })
-  
-  // orders for customer
-  app.get('/orders/:userId', verifyToken, async (req, res) =>{
+    app.get('/orders', async(req,res) =>{
+      try {
+        const orders = await orderCollection.find().toArray();
+        res.json(orders)
+      } catch (error) {
+        res.status(500).json({message:error.message})
+      }
+    })
+
+    app.get('/orders/:userId', verifyToken, async (req, res) =>{
       const id = req.params.userId;
       const query = {_id: new ObjectId(id)}
       const result = await orderCollection.find(query).toArray()
       res.send(result);
-  })
-  
+    })
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
